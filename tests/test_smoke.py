@@ -15,4 +15,4 @@ def test_design_requires_payment():
 
 
 def test_status_is_free():
-    assert client.get("/api/v1/missions/abc").status_code == 501
+    assert client.get("/api/v1/missions/abc").status_code == 404
