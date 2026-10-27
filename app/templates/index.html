@@ -1,0 +1,28 @@
+{% extends "base.html" %}
+{% block head %}
+<script src="https://unpkg.com/htmx-ext-json-enc@2.0.1/json-enc.js"></script>
+<script type="importmap">{"imports": {"three": "https://cdn.jsdelivr.net/npm/three@0.170.0/build/three.module.js"}}</script>
+{% endblock %}
+{% block body %}
+<main class="max-w-3xl mx-auto px-4 py-16">
+  <h1 class="text-4xl font-semibold tracking-tight">PROBE</h1>
+  <form class="mt-8 flex gap-2" hx-post="/api/v1/missions/design" hx-ext="json-enc" hx-target="#result">
+    <input name="sentence" class="flex-1 bg-zinc-900 border border-zinc-700 rounded px-3 py-2" placeholder="Send a probe to Europa that photographs Jupiter on the way">
+    <button class="bg-white text-black rounded px-4">Launch</button>
+  </form>
+  <div id="result" class="mt-6"></div>
+  <div id="sky" class="mt-10 h-96 rounded border border-zinc-800"></div>
+</main>
+<script type="module">
+  import * as THREE from "three";
+  const el = document.getElementById("sky");
+  const scene = new THREE.Scene();
+  const camera = new THREE.PerspectiveCamera(50, el.clientWidth / el.clientHeight, 0.1, 1000);
+  camera.position.z = 12;
+  const renderer = new THREE.WebGLRenderer({ antialias: true });
+  renderer.setSize(el.clientWidth, el.clientHeight);
+  el.appendChild(renderer.domElement);
+  scene.add(new THREE.Mesh(new THREE.SphereGeometry(0.6, 32, 32), new THREE.MeshBasicMaterial({ color: 0xffcc55 })));
+  renderer.setAnimationLoop(() => renderer.render(scene, camera));
+</script>
+{% endblock %}
