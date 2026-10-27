@@ -93,6 +93,7 @@ class MissionSpec:
     via: list[str] = field(default_factory=list)  # bodies the owner asked to pass
     dry_mass_kg: float = 1800.0
     isp_s: float = 323.0  # bipropellant main engine
+    capture_period_days: float | None = None  # overrides the default capture orbit
 
     @property
     def planet(self) -> str:
@@ -115,7 +116,8 @@ def capture_params(spec: MissionSpec) -> tuple[bool, float, float]:
     if spec.arrival == "flyby" or spec.planet not in CAPTURE:
         return False, 1.0, 1.0
     cap = CAPTURE[spec.planet]
-    return True, cap["rp"], cap["period_days"] * 86400.0
+    period = spec.capture_period_days or cap["period_days"]
+    return True, cap["rp"], period * 86400.0
 
 
 def tour_dv(spec: MissionSpec) -> float:
@@ -209,7 +211,7 @@ def evaluate_design(seq, x, table, spec) -> dict:
 
 def find_windows(spec: MissionSpec, start: datetime, horizon_days: float = 1100.0, bin_days: float = 180.0,
                  source: str = "horizons", cache_dir=None, workers: int = 2, maxiter: int = 250,
-                 tolerance: float = 0.15) -> dict:
+                 tolerance: float = 0.15, priority: str = "soonest") -> dict:
     """Search the horizon and return the next launch window plus the best alternative per sequence."""
     seqs = candidate_sequences(spec)
     t0 = jd_from_dt(start)
@@ -235,8 +237,13 @@ def find_windows(spec: MissionSpec, start: datetime, horizon_days: float = 1100.
     if not feasible:
         return {"status": "infeasible", "ephemeris_source": table.source, "searched": len(jobs), "designs": []}
     best = min(d["cost"] for d in feasible)
-    ok = sorted((d for d in feasible if d["cost"] <= best * (1.0 + tolerance)), key=lambda d: d["x"][0])
-    chosen = ok[0]
+    if priority == "fastest":
+        chosen = min(feasible, key=lambda d: d["detail"]["arrival_jd"] - d["detail"]["launch_jd"])
+    elif priority == "heaviest":
+        chosen = min(feasible, key=lambda d: d["cost"])
+    else:  # soonest: the next window that is nearly as good as the best one
+        ok = sorted((d for d in feasible if d["cost"] <= best * (1.0 + tolerance)), key=lambda d: d["x"][0])
+        chosen = ok[0]
     alts = {}
     for d in sorted(feasible, key=lambda d: d["cost"]):
         alts.setdefault("-".join(d["sequence"]), d)

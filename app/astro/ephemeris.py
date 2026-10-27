@@ -116,8 +116,8 @@ def _horizons_table(jd_start: float, jd_end: float, step: float, timeout: float 
 def load_table(jd_start: float, jd_end: float, source: str = "horizons", cache_dir: Path | None = None,
                step: float = 1.0) -> EphemerisTable:
     """Daily table covering [jd_start, jd_end]. Horizons falls back to DE421 if unreachable."""
-    jd_start = float(np.floor(jd_start)) - 0.5
-    jd_end = float(np.ceil(jd_end)) + 0.5
+    jd_start = float(np.floor(jd_start - 0.5)) + 0.5  # snap to the 0h TDB grid; idempotent
+    jd_end = float(np.ceil(jd_end - 0.5)) + 0.5
     key = hashlib.sha1(f"{source}:{jd_start}:{jd_end}:{step}".encode()).hexdigest()[:16]
     path = cache_dir / f"ephem-{key}.npz" if cache_dir else None
     if path and path.exists():

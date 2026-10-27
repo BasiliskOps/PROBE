@@ -1,28 +1,33 @@
 {% extends "base.html" %}
-{% block head %}
-<script src="https://unpkg.com/htmx-ext-json-enc@2.0.1/json-enc.js"></script>
-<script type="importmap">{"imports": {"three": "https://cdn.jsdelivr.net/npm/three@0.170.0/build/three.module.js"}}</script>
-{% endblock %}
+{% block title %}PROBE: send a real probe anywhere in the solar system{% endblock %}
 {% block body %}
-<main class="max-w-3xl mx-auto px-4 py-16">
-  <h1 class="text-4xl font-semibold tracking-tight">PROBE</h1>
-  <form class="mt-8 flex gap-2" hx-post="/api/v1/missions/design" hx-ext="json-enc" hx-target="#result">
-    <input name="sentence" class="flex-1 bg-zinc-900 border border-zinc-700 rounded px-3 py-2" placeholder="Send a probe to Europa that photographs Jupiter on the way">
-    <button class="bg-white text-black rounded px-4">Launch</button>
-  </form>
-  <div id="result" class="mt-6"></div>
-  <div id="sky" class="mt-10 h-96 rounded border border-zinc-800"></div>
+<main class="relative min-h-screen overflow-hidden">
+  <div id="sky" class="absolute inset-0" aria-label="The solar system today, with planets at their real positions"></div>
+
+  <section class="relative z-10 flex min-h-screen flex-col justify-end px-5 pb-10 sm:px-10 sm:pb-14 pointer-events-none">
+    <h1 class="font-display font-black leading-[0.82] tracking-tight text-[22vw] sm:text-[11rem] text-flight/95">PROBE</h1>
+    <p class="mt-4 max-w-xl text-lg leading-relaxed text-flight/85">
+      Describe a mission in one sentence. Agents design it against JPL ephemerides, put it on a real rocket in
+      the next real launch window, and your probe flies it in real time, writing to you at every milestone.
+    </p>
+    <form class="pointer-events-auto mt-7 flex max-w-2xl flex-col gap-3 sm:flex-row"
+          hx-post="/web/missions" hx-target="#form-msg" hx-disabled-elt="find button">
+      <label for="sentence" class="sr-only">Your mission</label>
+      <input id="sentence" name="sentence" required minlength="8" maxlength="400" autocomplete="off"
+             class="flex-1 rounded-md border border-flight/25 bg-deep/80 px-4 py-3.5 text-base text-flight placeholder:text-haze/70 backdrop-blur focus:border-gold"
+             placeholder="Send a probe to Europa that photographs Jupiter on the way">
+      <button class="rounded-md bg-gold px-6 py-3.5 font-semibold text-deep transition hover:bg-[#ecc15f]">
+        Design my mission
+      </button>
+    </form>
+    <p id="form-msg" class="pointer-events-auto mt-3 text-sm text-haze" aria-live="polite"></p>
+    <p class="mt-6 text-sm text-haze" id="sky-date">Your first probe is free.</p>
+  </section>
 </main>
 <script type="module">
-  import * as THREE from "three";
-  const el = document.getElementById("sky");
-  const scene = new THREE.Scene();
-  const camera = new THREE.PerspectiveCamera(50, el.clientWidth / el.clientHeight, 0.1, 1000);
-  camera.position.z = 12;
-  const renderer = new THREE.WebGLRenderer({ antialias: true });
-  renderer.setSize(el.clientWidth, el.clientHeight);
-  el.appendChild(renderer.domElement);
-  scene.add(new THREE.Mesh(new THREE.SphereGeometry(0.6, 32, 32), new THREE.MeshBasicMaterial({ color: 0xffcc55 })));
-  renderer.setAnimationLoop(() => renderer.render(scene, camera));
+  import { mountSky } from "/static/sky.js";
+  const sky = await mountSky(document.getElementById("sky"), { lift: true });
+  const d = new Date(sky.date + "T00:00:00Z").toLocaleDateString(undefined, { dateStyle: "long", timeZone: "UTC" });
+  document.getElementById("sky-date").textContent = `Planets shown where they are on ${d}. Your first probe is free.`;
 </script>
 {% endblock %}

@@ -1,0 +1,18 @@
+{% extends "base.html" %}
+{% block title %}{% if v.probe %}{{ v.probe.name }}: {{ v.arrival.body|title }}{% else %}Designing a mission{% endif %} | PROBE{% endblock %}
+{% block body %}
+<div class="lg:grid lg:min-h-screen lg:grid-cols-[minmax(0,1fr)_440px]">
+  <div class="relative h-[62vh] lg:sticky lg:top-0 lg:h-screen">
+    <a href="/" class="absolute left-5 top-4 z-10 font-display text-3xl font-black tracking-tight text-flight">PROBE</a>
+    <div id="sky" class="absolute inset-0" aria-label="The solar system today with this probe's trajectory"></div>
+  </div>
+  <aside id="panel" class="border-flight/10 bg-deep/70 px-5 py-8 sm:px-8 lg:border-l lg:overflow-y-auto lg:h-screen"
+         {% if v.status == "designing" %}hx-get="/web/m/{{ v.id }}/panel?was=designing" hx-trigger="every 4s" hx-target="#panel"{% else %}hx-get="/web/m/{{ v.id }}/panel" hx-trigger="every 120s" hx-target="#panel"{% endif %}>
+    {% include "_panel.html" %}
+  </aside>
+</div>
+<script type="module">
+  import { mountSky } from "/static/sky.js";
+  mountSky(document.getElementById("sky"), {% if v.status not in ("designing", "failed") %}{ mission: {{ v.id|tojson }}, name: {{ v.probe.name|tojson }} }{% else %}{}{% endif %});
+</script>
+{% endblock %}
