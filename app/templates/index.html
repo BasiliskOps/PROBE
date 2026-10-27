@@ -7,21 +7,33 @@
   <section class="relative z-10 flex min-h-screen flex-col justify-end px-5 pb-10 sm:px-10 sm:pb-14 pointer-events-none">
     <h1 class="font-display font-black leading-[0.82] tracking-tight text-[22vw] sm:text-[11rem] text-flight/95">PROBE</h1>
     <p class="mt-4 max-w-xl text-lg leading-relaxed text-flight/85">
-      Describe a mission in one sentence. Agents design it against JPL ephemerides, put it on a real rocket in
-      the next real launch window, and your probe flies it in real time, writing to you at every milestone.
+      Send a probe to prospect the solar system for the water, nickel, cobalt and platinum-group metals we will
+      need off this planet. Targets come live from NASA JPL's asteroid catalog. Your probe flies real orbital
+      mechanics, surveys what it finds and adds it to a shared atlas.
     </p>
     <form class="pointer-events-auto mt-7 flex max-w-2xl flex-col gap-3 sm:flex-row"
           hx-post="/web/missions" hx-target="#form-msg" hx-disabled-elt="find button">
       <label for="sentence" class="sr-only">Your mission</label>
       <input id="sentence" name="sentence" required minlength="8" maxlength="400" autocomplete="off"
              class="flex-1 rounded-md border border-flight/25 bg-deep/80 px-4 py-3.5 text-base text-flight placeholder:text-haze/70 backdrop-blur focus:border-gold"
-             placeholder="Send a probe to Europa that photographs Jupiter on the way">
+             placeholder="Find water on a near-Earth asteroid">
       <button class="rounded-md bg-gold px-6 py-3.5 font-semibold text-deep transition hover:bg-[#ecc15f]">
         Design my mission
       </button>
     </form>
     <p id="form-msg" class="pointer-events-auto mt-3 text-sm text-haze" aria-live="polite"></p>
     <p class="mt-6 text-sm text-haze" id="sky-date">Your first probe is free.</p>
+    {% if recent %}
+    <section class="pointer-events-auto mt-6 max-w-2xl" aria-labelledby="inflight">
+      <h2 id="inflight" class="font-display text-xl font-bold">Probes out there now</h2>
+      <ul class="mt-2 divide-y divide-flight/10 text-sm">
+        {% for r in recent %}
+        <li><a class="flex justify-between gap-4 py-2 hover:text-gold" href="/m/{{ r.id }}">
+          <span>{{ r.name }} to {{ r.target }}</span><span class="text-haze">{{ r.status }}</span></a></li>
+        {% endfor %}
+      </ul>
+    </section>
+    {% endif %}
   </section>
 </main>
 <script type="module">

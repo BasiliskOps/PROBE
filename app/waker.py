@@ -28,7 +28,21 @@ async def _notify(m: dict, text: str, event: dict) -> None:
         log.warning("notify failed for %s: %s", m["id"], exc)
 
 
-async def tick_mission(m: dict, jd_now: float) -> int:
+def run_survey(m: dict, event: dict) -> dict | None:
+    """Record the probe's measurements of its asteroid in the shared atlas."""
+    from app.prospect import composition
+
+    sb = m["spec"].get("small_body")
+    if not sb:
+        return None
+    s = composition.survey(sb, event["data"]["mode"], m["id"])
+    store.add_survey(m["id"], sb["id"], event["jd"], s)
+    return s
+
+
+async def tick_mission(m: dict, real_jd: float) -> int:
+    """Advance one mission to its own mission time and send what is due."""
+    jd_now = flight.sim_now(m, real_jd)
     sent = 0
     changed = bool(flight.expire_decisions(m, jd_now))
     if m["status"] == "ready" and jd_now >= m["detail"]["launch_jd"]:
@@ -47,8 +61,10 @@ async def tick_mission(m: dict, jd_now: float) -> int:
             if dec is None or dec["status"] == "decided":
                 store.add_message(m["id"], e["id"], e["jd"], "decision", "Decision already settled.")
                 continue
-        use_model = calls < MODEL_CALLS_PER_MISSION_PER_TICK and (jd_now - e["jd"]) < 30
-        text = await agents.milestone_message(m, e, snap, dec, recent, use_model=use_model)
+        survey = run_survey(m, e) if e["kind"] == "survey" else None
+        rate = m.get("clock", {}).get("rate", 1.0)
+        use_model = calls < MODEL_CALLS_PER_MISSION_PER_TICK and (jd_now - e["jd"]) < 30 * rate
+        text = await agents.milestone_message(m, e, snap, dec, recent, use_model=use_model, survey=survey)
         calls += int(use_model)
         if store.add_message(m["id"], e["id"], e["jd"], e["kind"], text):
             sent += 1
@@ -59,14 +75,22 @@ async def tick_mission(m: dict, jd_now: float) -> int:
     return sent
 
 
-async def tick(now: datetime | None = None) -> int:
-    jd_now = jd_from_dt(now or datetime.now(timezone.utc))
+async def tick(now: datetime | None = None, fleet_enabled: bool = True) -> int:
+    now = now or datetime.now(timezone.utc)
+    jd_now = jd_from_dt(now)
     total = 0
     for m in store.active():
         try:
             total += await tick_mission(m, jd_now)
         except Exception:
             log.exception("waker failed for %s", m["id"])
+    if fleet_enabled:
+        from app.prospect import fleet
+
+        try:
+            await fleet.run_daily(now)
+        except Exception:
+            log.exception("house fleet failed")
     return total
 
 

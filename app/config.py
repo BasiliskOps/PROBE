@@ -24,6 +24,8 @@ class Settings(BaseSettings):
     search_maxiter: int = 250
     waker_interval_s: int = 600  # how often the in-process waker checks for due milestones
     free_probes_per_browser: int = 1
+    mission_clock: float = 30.0  # mission days per real day
+    fleet_launches_per_day: int = 1  # house probes sent to newly discovered near-Earth asteroids
 
 
 settings = Settings()

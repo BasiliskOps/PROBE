@@ -1,5 +1,5 @@
 {% extends "base.html" %}
-{% block title %}{% if v.probe %}{{ v.probe.name }}: {{ v.arrival.body|title }}{% else %}Designing a mission{% endif %} | PROBE{% endblock %}
+{% block title %}{% if v.probe %}{{ v.probe.name }}: {{ v.arrival.body }}{% else %}Designing a mission{% endif %} | PROBE{% endblock %}
 {% block body %}
 <div class="lg:grid lg:min-h-screen lg:grid-cols-[minmax(0,1fr)_440px]">
   <div class="relative h-[62vh] lg:sticky lg:top-0 lg:h-screen">

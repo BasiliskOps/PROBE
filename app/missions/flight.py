@@ -38,7 +38,28 @@ def _table(source: str, jd_start: float, jd_end: float) -> EphemerisTable:
 
 def mission_table(m: dict) -> EphemerisTable:
     e = m["design"]["ephemeris"]
-    return _table(e["source"], e["jd_start"], e["jd_end"])
+    table = _table(e["source"], e["jd_start"], e["jd_end"])
+    sb = m["spec"].get("small_body")
+    if sb:
+        from app.astro.smallbody import extend
+
+        table = extend(table, sb)
+    return table
+
+
+SURVEY_DAYS = 60.0  # mission days a rendezvous probe spends mapping before it reports
+
+
+def body_label(name: str) -> str:
+    return BODY.get(name, {}).get("label") or name.title()
+
+
+def sim_now(m: dict, real_jd: float) -> float:
+    """Mission time. A mission clock rate of 30 flies a month of mission per real day."""
+    c = m.get("clock")
+    if not c:
+        return real_jd
+    return c["sim0"] + (real_jd - c["real0"]) * c["rate"]
 
 
 def spec_of(m: dict) -> S.MissionSpec:
@@ -54,6 +75,11 @@ def redesign(m: dict) -> None:
 
 def planet_state(m: dict, name: str, jd: float):
     """Planet state at any date: the mission table when it covers jd, else a small table around jd."""
+    sb = m["spec"].get("small_body")
+    if sb and name.startswith("sb:"):
+        from app.astro import smallbody
+
+        return smallbody.state(sb, jd)
     table = mission_table(m)
     if not (table.jd0 <= jd <= table.jd_end - 1):
         e = m["design"]["ephemeris"]
@@ -130,14 +156,26 @@ def timeline(m: dict) -> list[dict]:
             ev.append({"id": f"dsm-{i}", "kind": "maneuver", "jd": d["jd"], "title": "Deep-space maneuver",
                        "data": {"dv_ms": round(d["dv_kms"] * 1000)}})
     for i, f in enumerate(det["flybys"]):
-        ev.append({"id": f"flyby-{i}", "kind": "flyby", "jd": f["jd"], "title": f"{f['body'].title()} flyby",
+        ev.append({"id": f"flyby-{i}", "kind": "flyby", "jd": f["jd"], "title": f"{body_label(f['body'])} flyby",
                    "data": {"body": f["body"], "altitude_km": round(f["altitude_km"]),
                             "speed_kms": round(f["vinf_kms"], 2)}})
     ev += _crossings(m)
     planet = spec.planet
-    if spec.arrival == "orbit":
+    name = body_label(planet)
+    if spec.small_body:
+        if spec.arrival == "orbit":
+            ev.append({"id": "arrival", "kind": "arrival", "jd": det["arrival_jd"], "title": f"Rendezvous with {name}",
+                       "data": {"dv_ms": round(det["arrival_dv_kms"] * 1000), "vinf_kms": round(det["vinf_arr_kms"], 2)}})
+            ev.append({"id": "survey", "kind": "survey", "jd": det["arrival_jd"] + SURVEY_DAYS,
+                       "title": f"Survey of {name} complete", "data": {"mode": "rendezvous"}})
+        else:
+            ev.append({"id": "arrival", "kind": "arrival", "jd": det["arrival_jd"], "title": f"{name} flyby",
+                       "data": {"vinf_kms": round(det["vinf_arr_kms"], 2)}})
+            ev.append({"id": "survey", "kind": "survey", "jd": det["arrival_jd"] + 1,
+                       "title": f"Flyby data from {name} downlinked", "data": {"mode": "flyby"}})
+    elif spec.arrival == "orbit":
         ev.append({"id": "arrival", "kind": "arrival", "jd": det["arrival_jd"],
-                   "title": f"{planet.title()} orbit insertion",
+                   "title": f"{name} orbit insertion",
                    "data": {"dv_ms": round(det["arrival_dv_kms"] * 1000), "vinf_kms": round(det["vinf_arr_kms"], 2)}})
         period = spec.capture_period_days or CAPTURE[planet]["period_days"]
         if spec.target in MOONS:
@@ -147,7 +185,7 @@ def timeline(m: dict) -> list[dict]:
             ev.append({"id": "science", "kind": "science", "jd": det["arrival_jd"] + period,
                        "title": "First science orbit complete", "data": {"period_days": period}})
     else:
-        ev.append({"id": "arrival", "kind": "arrival", "jd": det["arrival_jd"], "title": f"{planet.title()} flyby",
+        ev.append({"id": "arrival", "kind": "arrival", "jd": det["arrival_jd"], "title": f"{name} flyby",
                    "data": {"vinf_kms": round(det["vinf_arr_kms"], 2)}})
     for dec in m.get("decisions", []):
         ev.append({"id": f"decision-{dec['id']}", "kind": "decision", "jd": dec["opens_jd"],
@@ -169,11 +207,11 @@ def _maneuvers(m: dict, x: list[float], spec: S.MissionSpec) -> float:
 def _dv_fn(m: dict, spec: S.MissionSpec):
     from app.astro.mga import evaluate
 
-    seq = np.array([PLANETS.index(b) for b in m["design"]["sequence"]], dtype=np.int64)
     table = mission_table(m)
+    seq = np.array([table.names.index(b) for b in m["design"]["sequence"]], dtype=np.int64)
     capture, cap_rp, cap_period = S.capture_params(spec)
-    mus = np.array([BODY[p]["mu"] for p in PLANETS])
-    rpmins = np.array([BODY[p]["rp_min"] for p in PLANETS])
+    mus = np.array([BODY[p]["mu"] for p in table.names])
+    rpmins = np.array([BODY[p]["rp_min"] for p in table.names])
 
     def dv(x) -> float:
         try:
@@ -233,7 +271,7 @@ def closer_flyby(m: dict, i: int, budget_kms: float) -> dict | None:
 
 def _capture_decision(m: dict) -> dict | None:
     spec, det = spec_of(m), m["detail"]
-    if spec.arrival != "orbit":
+    if spec.arrival != "orbit" or spec.small_body:
         return None
     p0 = CAPTURE[spec.planet]["period_days"]
     _, rp, _ = S.capture_params(S.MissionSpec(**{**m["spec"], "capture_period_days": None}))
@@ -270,7 +308,7 @@ def build_decisions(m: dict) -> list[dict]:
                 else "same arrival date")
         out.append({
             "id": f"flyby-{i}", "kind": "flyby", "opens_jd": f["jd"] - 60, "deadline_jd": f["jd"] - 14,
-            "question": f"Spend propellant to pass {f['body'].title()} at {round(alt):,} km instead of "
+            "question": f"Spend propellant to pass {body_label(f['body'])} at {round(alt):,} km instead of "
                         f"{round(f['altitude_km']):,} km?",
             "options": [
                 {"id": "closer", "label": f"Go in to {round(alt):,} km and {when}",
@@ -382,3 +420,16 @@ def sky(jd: float) -> dict:
         orbit = [ecliptic_au(kepler(r, v, period * k / 180, MU_SUN)[0]) for k in range(181)]
         out[name] = {"position": ecliptic_au(r), "orbit": orbit}
     return out
+
+
+def target_orbit(m: dict, jd: float) -> dict | None:
+    """The asteroid's orbit polyline and position (ecliptic AU) for the 3D view."""
+    sb = m["spec"].get("small_body")
+    if not sb:
+        return None
+    from app.astro import smallbody
+
+    r, v = smallbody.state(sb, jd)
+    period = 2 * math.pi * math.sqrt((sb["a"] * AU_KM) ** 3 / MU_SUN)
+    orbit = [ecliptic_au(kepler(r, v, period * k / 180, MU_SUN)[0]) for k in range(181)]
+    return {"name": sb["name"], "position": ecliptic_au(r), "orbit": orbit}

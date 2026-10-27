@@ -94,13 +94,23 @@ class MissionSpec:
     dry_mass_kg: float = 1800.0
     isp_s: float = 323.0  # bipropellant main engine
     capture_period_days: float | None = None  # overrides the default capture orbit
+    small_body: dict | None = None  # JPL SBDB target when flying to an asteroid
 
     @property
     def planet(self) -> str:
+        if self.small_body:
+            from .smallbody import key
+
+            return key(self.small_body)
         return MOONS[self.target]["parent"] if self.target in MOONS else self.target
 
 
 def candidate_sequences(spec: MissionSpec) -> list[list[str]]:
+    if spec.small_body:
+        from .smallbody import register
+
+        k = register(spec.small_body)
+        return [["earth", k], ["earth", "earth", k], ["earth", "mars", k]]
     seqs = SEQUENCES[spec.planet]
     want = [b for b in spec.via if b not in (spec.planet, "earth")]
     if want:
@@ -113,6 +123,10 @@ def candidate_sequences(spec: MissionSpec) -> list[list[str]]:
 
 
 def capture_params(spec: MissionSpec) -> tuple[bool, float, float]:
+    if spec.small_body and spec.arrival != "flyby":
+        # Rendezvous: match the asteroid's orbit and settle into a slow survey orbit.
+        r = BODY[spec.planet]["radius"]
+        return True, 3.0 * r, (spec.capture_period_days or 2.0) * 86400.0
     if spec.arrival == "flyby" or spec.planet not in CAPTURE:
         return False, 1.0, 1.0
     cap = CAPTURE[spec.planet]
@@ -170,12 +184,12 @@ class Objective:
     """Picklable objective for one sequence."""
 
     def __init__(self, seq, table: EphemerisTable, spec: MissionSpec):
-        self.seq_idx = np.array([INDEX[s] for s in seq], dtype=np.int64)
+        self.seq_idx = np.array([table.names.index(s) for s in seq], dtype=np.int64)
         self.table = table
         self.spec = spec
         self.capture, self.cap_rp, self.cap_period = capture_params(spec)
-        self.mus = np.array([BODY[p]["mu"] for p in PLANETS])
-        self.rpmins = np.array([BODY[p]["rp_min"] for p in PLANETS])
+        self.mus = np.array([BODY[p]["mu"] for p in table.names])
+        self.rpmins = np.array([BODY[p]["rp_min"] for p in table.names])
 
     def __call__(self, x):
         try:
@@ -217,6 +231,10 @@ def find_windows(spec: MissionSpec, start: datetime, horizon_days: float = 1100.
     t0 = jd_from_dt(start)
     longest = max(sum(b for _, b in leg_bounds(s)) for s in seqs)
     table = load_table(t0 - 2, t0 + horizon_days + longest + 2, source=source, cache_dir=cache_dir)
+    if spec.small_body:
+        from .smallbody import extend
+
+        table = extend(table, spec.small_body)
 
     jobs = []
     n_bins = max(1, int(math.ceil(horizon_days / bin_days)))
