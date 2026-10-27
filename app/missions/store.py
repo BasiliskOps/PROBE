@@ -33,6 +33,16 @@ create table if not exists messages (
     unique (mission_id, event_id)
 );
 create index if not exists messages_mission on messages (mission_id, jd);
+create table if not exists surveys (
+    id integer primary key autoincrement,
+    mission_id text not null,
+    target_id text not null,
+    jd real not null,
+    doc text not null,
+    unique (mission_id, target_id)
+);
+create index if not exists surveys_target on surveys (target_id);
+create table if not exists meta (key text primary key, value text not null);
 """
 
 
@@ -110,3 +120,47 @@ def messages(mid: str) -> list[dict]:
     rows = conn().execute("select event_id, jd, kind, text from messages where mission_id = ? order by jd desc, id desc",
                           (mid,)).fetchall()
     return [dict(r) for r in rows]
+
+
+def add_survey(mid: str, target_id: str, jd: float, doc: dict) -> bool:
+    with _lock:
+        cur = conn().execute("insert or ignore into surveys (mission_id, target_id, jd, doc) values (?,?,?,?)",
+                             (mid, target_id, jd, json.dumps(doc)))
+        conn().commit()
+    return cur.rowcount == 1
+
+
+def surveys(target_id: str | None = None) -> list[dict]:
+    if target_id:
+        rows = conn().execute("select mission_id, target_id, jd, doc from surveys where target_id = ? order by jd",
+                              (target_id,)).fetchall()
+    else:
+        rows = conn().execute("select mission_id, target_id, jd, doc from surveys order by jd").fetchall()
+    return [{"mission_id": r["mission_id"], "target_id": r["target_id"], "jd": r["jd"], **json.loads(r["doc"])}
+            for r in rows]
+
+
+def recent(limit: int = 12) -> list[dict]:
+    rows = conn().execute("select doc from missions where status in ('ready','in_flight','arrived') "
+                          "order by created_at desc limit ?", (limit,)).fetchall()
+    return [json.loads(r["doc"]) for r in rows]
+
+
+def get_meta(key: str, default: str | None = None) -> str | None:
+    row = conn().execute("select value from meta where key = ?", (key,)).fetchone()
+    return row["value"] if row else default
+
+
+def set_meta(key: str, value: str) -> None:
+    with _lock:
+        conn().execute("insert into meta (key, value) values (?, ?) on conflict(key) do update set value = excluded.value",
+                       (key, value))
+        conn().commit()
+
+
+def targeted_ids(plan: str | None = None) -> set[str]:
+    out = set()
+    for m in active():
+        if (plan is None or m.get("plan") == plan) and m.get("spec", {}).get("small_body"):
+            out.add(m["spec"]["small_body"]["id"])
+    return out

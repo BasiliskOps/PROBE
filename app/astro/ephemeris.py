@@ -12,7 +12,7 @@ from __future__ import annotations
 
 import hashlib
 import logging
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from pathlib import Path
 
 import numpy as np
@@ -32,6 +32,7 @@ class EphemerisTable:
     step: float  # days
     pos: np.ndarray  # (n_planets, n_steps, 3) km
     vel: np.ndarray  # (n_planets, n_steps, 3) km/s
+    names: list = field(default_factory=lambda: list(PLANETS))  # row order; asteroids are appended
 
     @property
     def jd_end(self) -> float:
@@ -40,7 +41,7 @@ class EphemerisTable:
     def state(self, body: str, jd: float) -> tuple[np.ndarray, np.ndarray]:
         from .mga import hermite
 
-        return hermite(self.pos, self.vel, PLANETS.index(body), self.jd0, self.step, jd)
+        return hermite(self.pos, self.vel, self.names.index(body), self.jd0, self.step, jd)
 
 
 def _de421_table(jd_start: float, jd_end: float, step: float) -> EphemerisTable:

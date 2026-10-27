@@ -194,10 +194,10 @@ def evaluate(x, seq, mus, rpmins, pos, vel, jd0, step, mu_sun, capture, cap_rp, 
 
 def decode(x, seq_names, table, mu_sun, capture, cap_rp, cap_period_s):
     """Full mission geometry for a design vector: arcs, maneuvers and flybys."""
-    from .constants import BODY, PLANETS
+    from .constants import BODY
 
     x = np.asarray(x, dtype=float)
-    seq = [PLANETS.index(s) for s in seq_names]
+    seq = [table.names.index(s) for s in seq_names]
     t = float(x[0])
     r, vp = hermite(table.pos, table.vel, seq[0], table.jd0, table.step, t)
     vinf_vec, dla = departure_vector(x[1], x[2], x[3])

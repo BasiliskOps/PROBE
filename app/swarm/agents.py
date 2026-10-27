@@ -57,12 +57,15 @@ def summarize(m: dict) -> dict:
     """Compact, model-safe facts about a designed mission."""
     from app.astro.search import iso
 
+    from app.missions.flight import body_label
+
     det, bud = m["detail"], m["budget"]
-    return {
+    sb = m["spec"].get("small_body")
+    out = {
         "owner_request": m["sentence"],
-        "target": m["spec"]["target"],
-        "arrival": m["spec"]["arrival"],
-        "route": det["sequence"],
+        "target": sb["name"] if sb else m["spec"]["target"],
+        "arrival": ("rendezvous" if m["spec"]["arrival"] == "orbit" else "flyby") if sb else m["spec"]["arrival"],
+        "route": [body_label(b) for b in det["sequence"]],
         "launch_date": iso(det["launch_jd"]),
         "arrival_date": iso(det["arrival_jd"]),
         "flight_years": round((det["arrival_jd"] - det["launch_jd"]) / 365.25, 2),
@@ -75,7 +78,17 @@ def summarize(m: dict) -> dict:
         "probe_dry_mass_kg": round(bud["dry_mass_kg"]),
         "launch_mass_kg": round(bud["wet_mass_kg"]),
         "ephemeris": m["design"]["ephemeris"]["source"],
+        "mission_clock": f"{m.get('clock', {}).get('rate', 1):g} mission days pass per real day",
     }
+    if sb:
+        p = m.get("prior", {})
+        out["asteroid"] = {
+            "spectral_class": sb.get("spectral_class"), "composition_group": p.get("group"),
+            "diameter_km": round(sb["diameter_km"], 3), "near_earth": sb.get("neo"),
+            "expected_tonnes_before_survey": {k: float(f"{v:.2g}") for k, v in p.get("tonnes", {}).items()},
+            "prospecting_for": m.get("resource"),
+        }
+    return out
 
 
 async def persona(m: dict, intent: dict) -> dict:
@@ -88,13 +101,14 @@ async def persona(m: dict, intent: dict) -> dict:
     if out:
         out["source"] = "model"
         return out
-    name = intent.get("probe_name") or f"{facts['target'].title()} Probe {m['id'][:4].upper()}"
+    stem = "Prospector" if m["spec"].get("small_body") else facts["target"].title()
+    name = intent.get("probe_name") or f"{stem} {m['id'][:4].upper()}"
     return {
         "name": name,
         "personality": "Methodical and dry. It reports what it measures and keeps count of every meter per second.",
         "voice_rules": ["Leads with the number that matters", "Speaks in first person", "Signs off with its name"],
         "launch_message": (f"{name} here. I launch on {human(m['detail']['launch_jd'])} aboard "
-                           f"{facts['launch_vehicle']} and reach {facts['target'].title()} on "
+                           f"{facts['launch_vehicle']} and reach {facts['target']} on "
                            f"{human(m['detail']['arrival_jd'])}, "
                            f"{facts['flight_years']} years from liftoff. I will write at every milestone."),
         "source": "rules",
@@ -111,7 +125,7 @@ async def brief(m: dict) -> dict:
     if out:
         out["source"] = "model"
         return out
-    route = " to ".join(b.title() for b in facts["route"])
+    route = " to ".join(facts["route"])
     fb = "; ".join(f"{f['body'].title()} on {human(x['jd'])} at {f['altitude_km']:,} km"
                    for f, x in zip(facts["flybys"], m["detail"]["flybys"]))
     text = (f"Route: {route}. Launch {human(m['detail']['launch_jd'])} on {facts['launch_vehicle']} at C3 "
@@ -119,16 +133,38 @@ async def brief(m: dict) -> dict:
     if fb:
         text += f" Gravity assists: {fb}."
     text += f" Launch mass {facts['launch_mass_kg']:,} kg."
-    return {"mission_name": f"{facts['target'].title()} {facts['launch_date'][:4]}", "brief": text, "source": "rules"}
+    return {"mission_name": f"{facts['target']} {facts['launch_date'][:4]}", "brief": text, "source": "rules"}
+
+
+def fmt_tonnes(t: float) -> str:
+    """3.2 million t, 41,000 t, 380 kg."""
+    if t >= 1e9:
+        return f"{t / 1e9:.2g} billion t"
+    if t >= 1e6:
+        return f"{t / 1e6:.2g} million t"
+    if t >= 1:
+        return f"{float(f'{t:.2g}'):,.0f} t"
+    return f"{float(f'{t * 1000:.2g}'):,.0f} kg"
+
+
+def findings_facts(survey: dict) -> dict:
+    from app.prospect.composition import LABELS
+
+    return {"survey_mode": survey["mode"], "composition_group": survey["group"],
+            "measured_diameter_km": round(survey["diameter_km"], 3),
+            "one_sigma_uncertainty_percent": round(survey["sigma"] * 100),
+            "resources": {LABELS[k]: fmt_tonnes(v) for k, v in survey["tonnes"].items()}}
 
 
 async def milestone_message(m: dict, event: dict, snapshot: dict, decision: dict | None,
-                            recent: list[str], use_model: bool = True) -> str:
+                            recent: list[str], use_model: bool = True, survey: dict | None = None) -> str:
     from app.astro.search import iso
 
     p = m.get("persona", {})
     facts = {"event": event["title"], "date": iso(event["jd"]), "details": event.get("data", {}),
              "now": snapshot, "mission": summarize(m)}
+    if survey:
+        facts["findings"] = findings_facts(survey)
     if decision:
         facts["decision"] = {"question": decision["question"], "deadline": iso(decision["deadline_jd"]),
                              "options": [{"label": o["label"], "propellant_ms": o["dv_ms"]} for o in decision["options"]]}
@@ -136,7 +172,9 @@ async def milestone_message(m: dict, event: dict, snapshot: dict, decision: dict
         system = (f"You are {p.get('name', 'the probe')}, a robotic space probe writing to your owner. "
                   f"Personality: {p.get('personality', '')} Voice: {'; '.join(p.get('voice_rules', []))}. " + STYLE)
         prompt = (f"Write your message for this milestone. If there is a decision, ask the owner to choose "
-                  f"and state each option's propellant cost. Your last messages: {json.dumps(recent[-3:])}\n"
+                  f"and state each option's propellant cost. If there are findings, report what you measured, "
+                  f"lead with what the owner was prospecting for, and give the uncertainty. "
+                  f"Your last messages: {json.dumps(recent[-3:])}\n"
                   f"Facts: {json.dumps(facts)}")
         out = await structured(settings.model_voice, system, prompt, MESSAGE_TOOL, 600)
         if out and out.get("text"):
@@ -149,6 +187,11 @@ async def milestone_message(m: dict, event: dict, snapshot: dict, decision: dict
     if "dv_ms" in d:
         line += f" Burn {d['dv_ms']} m/s."
     line += f" I am {snapshot['earth_distance_au']:.2f} AU from Earth; light takes {snapshot['light_time_min']:.1f} min."
+    if survey:
+        ff = findings_facts(survey)
+        res = ", ".join(f"{k.lower()} {v}" for k, v in ff["resources"].items())
+        line += (f" Measured diameter {ff['measured_diameter_km'] * 1000:,.0f} m, {ff['composition_group']} body. "
+                 f"Estimated {res}, each within about {ff['one_sigma_uncertainty_percent']}%.")
     if decision:
         opts = "; ".join(f"{o['label']} ({o['dv_ms']} m/s)" for o in decision["options"])
         line += f" {decision['question']} Options: {opts}. Decide by {human(decision['deadline_jd'])}."

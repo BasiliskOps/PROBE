@@ -94,7 +94,7 @@ def test_public_api_and_patch(mars):
     mid, _ = mars
     client = TestClient(create_app(run_waker=False))
     v = client.get(f"/api/v1/missions/{mid}").json()
-    assert v["route"] == ["earth", "mars"] and v["probe"]["name"]
+    assert v["route"] == ["Earth", "Mars"] and v["probe"]["name"]
     assert all("set" not in o for d in v["decisions"] for o in d["options"])
     t = client.get(f"/api/v1/missions/{mid}/track").json()
     assert len(t["track"]) > 20 and len(t["track"][0]) == 4

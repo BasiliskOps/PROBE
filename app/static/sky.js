@@ -44,7 +44,8 @@ export async function mountSky(el, opts = {}) {
     tags.push({ d, pos });
   };
 
-  const sky = await (await fetch("/api/v1/sky")).json();
+  const t = opts.mission ? await (await fetch(`/api/v1/missions/${opts.mission}/track`)).json() : null;
+  const sky = await (await fetch(t ? `/api/v1/sky?jd=${t.jd_now}` : "/api/v1/sky")).json();
   let outer = 0;
   for (const [name, p] of Object.entries(sky.planets)) {
     const pts = p.orbit.map(scale);
@@ -61,8 +62,16 @@ export async function mountSky(el, opts = {}) {
   }
 
   let probe = null;
-  if (opts.mission) {
-    const t = await (await fetch(`/api/v1/missions/${opts.mission}/track`)).json();
+  if (t && t.target) {
+    const ast = 0xa9b7c9;
+    scene.add(new THREE.Line(new THREE.BufferGeometry().setFromPoints(t.target.orbit.map(scale)),
+      new THREE.LineBasicMaterial({ color: ast, transparent: true, opacity: 0.45 })));
+    const rock = new THREE.Mesh(new THREE.DodecahedronGeometry(0.11), new THREE.MeshBasicMaterial({ color: ast }));
+    rock.position.copy(scale(t.target.position));
+    scene.add(rock);
+    tag(t.target.name.replace(/\s*\(.*\)$/, ""), rock.position);
+  }
+  if (t) {
     const past = [], future = [];
     for (const [x, y, z, jd] of t.track) (jd <= t.jd_now ? past : future).push(scale([x, y, z]));
     if (past.length && future.length) future.unshift(past[past.length - 1]);

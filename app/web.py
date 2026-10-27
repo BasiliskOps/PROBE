@@ -26,6 +26,15 @@ def human(value) -> str:
 
 
 TEMPLATES.env.filters["human"] = human
+
+
+def tonnes(t: float) -> str:
+    from app.swarm.agents import fmt_tonnes
+
+    return fmt_tonnes(t)
+
+
+TEMPLATES.env.filters["tonnes"] = tonnes
 router = APIRouter()
 _tasks: set[asyncio.Task] = set()
 
@@ -36,9 +45,28 @@ def _owner_cookie(mid: str) -> str:
     return f"probe_owner_{mid}"
 
 
+def _recent() -> list[dict]:
+    from app.missions import flight
+
+    out = []
+    real = now_jd()
+    for m in store.recent(5):
+        sb = m["spec"].get("small_body")
+        jd = flight.sim_now(m, real)
+        det = m["detail"]
+        status = ("waiting to launch" if jd < det["launch_jd"] else "in flight" if jd < det["arrival_jd"]
+                  else "surveying" if sb else "arrived")
+        if m.get("plan") == "house":
+            status += ", house fleet"
+        out.append({"id": m["id"], "name": m["persona"]["name"],
+                    "target": sb["name"] if sb else m["spec"]["target"].title(), "status": status})
+    return out
+
+
 @router.get("/", response_class=HTMLResponse)
 async def index(request: Request):
-    return TEMPLATES.TemplateResponse(request, "index.html", {"product_name": settings.product_name})
+    return TEMPLATES.TemplateResponse(request, "index.html", {"product_name": settings.product_name,
+                                                              "recent": _recent()})
 
 
 @router.post("/web/missions")

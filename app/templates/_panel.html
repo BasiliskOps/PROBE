@@ -2,8 +2,8 @@
   <h1 class="font-display text-4xl font-bold leading-none">Designing your mission</h1>
   <blockquote class="mt-5 border-l-2 border-gold pl-4 text-lg italic text-flight/90">{{ v.sentence }}</blockquote>
   <p class="mt-6 leading-relaxed text-haze">
-    Agents are searching every route and every launch date over the next three years against JPL planet
-    positions, then sizing the propellant and picking a rocket that can lift it. This takes about a minute.
+    Agents are picking targets from the JPL asteroid catalog, then searching every route and launch date against
+    JPL planet positions, sizing the propellant and choosing a rocket that could lift it. This takes a minute or two.
   </p>
   <div class="mt-6 h-1 w-full overflow-hidden rounded bg-flight/10"><div class="h-full w-1/3 animate-pulse rounded bg-gold"></div></div>
 
@@ -18,11 +18,14 @@
   {% set n = v.now %}
   <h1 class="font-display text-5xl font-black leading-[0.9] tracking-tight">{{ v.probe.name }}</h1>
   <p class="mt-2 text-haze">
-    {% if n.phase == "prelaunch" %}On the pad. Launches {{ v.launch.date|human }} on {{ v.launch.vehicle.name }}.
+    {% if n.phase == "prelaunch" %}Waiting for launch on {{ v.launch.date|human }} aboard a simulated {{ v.launch.vehicle.name }}.
     {% elif n.phase == "cruise" %}In flight, {{ "%.2f"|format(n.sun_distance_au) }} AU from the Sun and {{ "%.1f"|format(n.light_time_min) }} light-minutes from Earth.
-    {% elif n.phase == "orbit" %}In orbit around {{ v.route[-1]|title }}.
-    {% else %}Past {{ v.route[-1]|title }} and heading out.{% endif %}
+    {% elif n.phase == "orbit" %}{% if v.asteroid %}Holding station at {{ v.asteroid.name }}.{% else %}In orbit around {{ v.route[-1] }}.{% endif %}
+    {% else %}Past {{ v.route[-1] }} and heading out.{% endif %}
   </p>
+  {% if v.mission_time.rate > 1 %}
+  <p class="mt-1 text-sm text-haze">Mission date {{ v.mission_time.date|human }}. Mission time runs {{ v.mission_time.rate|round|int }} times faster than real time, so a day here is a month out there.</p>
+  {% endif %}
   <blockquote class="mt-5 border-l-2 border-gold pl-4 italic text-flight/85">{{ v.sentence }}</blockquote>
 
   {% if error %}<p class="mt-5 rounded-md border border-mars/60 bg-mars/10 px-4 py-3 text-sm">{{ error }}</p>{% endif %}
@@ -50,6 +53,35 @@
   {% endfor %}
   {% if v.plan == "free" %}
   <p class="mt-6 text-sm text-haze">This free probe flies its planned route. Decision points, where you spend or save propellant, come with the $9.99 fleet plan.</p>
+  {% endif %}
+
+  {% if v.asteroid %}
+  {% set a = v.asteroid %}
+  <section class="mt-8" aria-labelledby="rock">
+    <h2 id="rock" class="font-display text-2xl font-bold">{{ a.name }}</h2>
+    <p class="mt-1 text-sm text-haze">
+      {{ "{:,}".format((a.diameter_km * 1000)|round|int) }} m across{% if not a.diameter_measured %} (estimated from brightness){% endif %},
+      {{ a.composition_group }} by {{ a.group_basis }}.{% if a.near_earth %} Near-Earth asteroid.{% endif %}
+      Prospecting for {{ {"pgm": "platinum-group metals", "any": "everything it holds"}.get(v.prospecting_for, v.prospecting_for) }}.
+    </p>
+    <table class="mt-4 w-full text-sm">
+      <thead><tr class="text-left text-haze"><th class="pb-2 font-normal">Resource</th><th class="pb-2 font-normal">Expected</th><th class="pb-2 font-normal">Measured</th></tr></thead>
+      <tbody>
+      {% for key, label in [("water","Water"),("iron","Iron"),("nickel","Nickel"),("cobalt","Cobalt"),("pgm","Platinum-group metals"),("carbon","Carbon and organics")] %}
+        <tr class="border-t border-flight/10 {% if key == v.prospecting_for %}text-gold{% endif %}">
+          <td class="py-2">{{ label }}</td>
+          <td class="py-2 text-flight/70">{{ a.expected_tonnes[key]|tonnes }}</td>
+          <td class="py-2">{% if v.findings %}{{ v.findings.tonnes[key]|tonnes }}{% else %}<span class="text-haze">after the survey</span>{% endif %}</td>
+        </tr>
+      {% endfor %}
+      </tbody>
+    </table>
+    <p class="mt-3 text-xs text-haze">
+      Expected values come from the asteroid's JPL catalog data and spectral class using meteorite analogs.
+      Measurements are simulated from the same science{% if v.findings %}, within about {{ (v.findings.relative_uncertainty * 100)|round|int }}% for this {{ v.findings.mode }} survey{% endif %}.
+      {% if v.atlas and v.atlas.surveys > 1 %}{{ v.atlas.surveys }} probes have surveyed this asteroid; the combined estimate is within about {{ (v.atlas.relative_uncertainty * 100)|round|int }}%.{% endif %}
+    </p>
+  </section>
   {% endif %}
 
   <section class="mt-9" aria-labelledby="letters">
@@ -90,7 +122,7 @@
       <div><dt class="text-haze">Probe delta-v</dt><dd>{{ "{:,}".format((v.budget.total_dv_kms * 1000)|round|int) }} m/s</dd></div>
       <div><dt class="text-haze">Arrival burn</dt><dd>{{ "{:,}".format(v.arrival.burn_ms) }} m/s</dd></div>
     </dl>
-    <p class="mt-3 text-xs text-haze">Planet positions from {{ v.ephemeris }}. Rocket performance from NASA launch vehicle data.</p>
+    <p class="mt-3 text-xs text-haze">Planet positions from {{ v.ephemeris }}{% if v.asteroid %}, asteroid orbit from the JPL Small-Body Database{% endif %}. The launch is simulated on a real rocket's published performance, from NASA launch vehicle data.</p>
   </section>
 
   <section class="mt-8 pb-6" aria-labelledby="patch">
