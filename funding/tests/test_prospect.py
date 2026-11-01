@@ -7,14 +7,15 @@ import numpy as np
 import pytest
 from scipy.optimize import differential_evolution, minimize
 
-from app import waker
-from app.api.routes import public_view
+from funding import waker
+from funding.api.routes import public_view
 from app.astro import search as S
 from app.astro import smallbody
 from app.astro.constants import AU_KM, MU_SUN, OBLIQUITY_DEG
 from app.astro.ephemeris import load_table
-from app.missions import designer, flight, store
-from app.prospect import catalog, composition, fleet, planner
+from funding.missions import designer, flight, store
+from app.prospect import catalog, composition, planner
+from funding import fleet
 
 NOW = datetime(2026, 10, 27, tzinfo=timezone.utc)
 

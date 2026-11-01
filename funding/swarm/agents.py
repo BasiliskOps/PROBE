@@ -10,7 +10,7 @@ import json
 
 from app.config import settings
 
-from .llm import obj, structured
+from app.swarm.llm import obj, structured
 
 STYLE = (
     "Write plain, specific sentences with varied length. Use only the facts and numbers you are given, and "
@@ -57,7 +57,7 @@ def summarize(m: dict) -> dict:
     """Compact, model-safe facts about a designed mission."""
     from app.astro.search import iso
 
-    from app.missions.flight import body_label
+    from funding.missions.flight import body_label
 
     det, bud = m["detail"], m["budget"]
     sb = m["spec"].get("small_body")

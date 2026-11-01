@@ -8,12 +8,12 @@ import pytest
 from fastapi import HTTPException
 from fastapi.testclient import TestClient
 
-from app import waker
-from app.api.routes import apply_decision, public_view
+from funding import waker
+from funding.api.routes import apply_decision, public_view
 from app.astro.search import jd_from_dt
-from app.main import create_app
-from app.missions import designer, flight, patch, store
-from app.swarm import intent
+from funding.main import create_app
+from funding.missions import designer, flight, patch, store
+from funding.swarm import intent
 
 START = datetime(2026, 10, 27, tzinfo=timezone.utc)
 

@@ -14,7 +14,7 @@ from datetime import datetime, timezone
 from app.astro import search as S
 from app.config import settings
 from app.prospect import catalog, composition, planner
-from app.swarm import agents, intent as intent_agent
+from funding.swarm import agents, intent as intent_agent
 
 from . import flight, store
 

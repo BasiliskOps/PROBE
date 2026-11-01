@@ -11,9 +11,9 @@ import logging
 from datetime import datetime
 
 from app.config import settings
-from app.missions import designer, store
+from funding.missions import designer, store
 
-from . import catalog
+from app.prospect import catalog
 
 log = logging.getLogger(__name__)
 HOUSE_PLAN = "house"

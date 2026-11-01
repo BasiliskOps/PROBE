@@ -1,0 +1,6 @@
+# Core collection run only (python -m app.collect.run). The full engine is in requirements.txt.
+httpx>=0.27
+numpy>=2.0
+jplephem>=2.22
+de421>=2008.1
+pydantic-settings>=2.4

@@ -5,7 +5,7 @@ from fastapi.responses import Response
 from pydantic import BaseModel, Field, HttpUrl
 
 from app.astro.search import iso, jd_from_dt
-from app.missions import designer, flight, patch, store
+from funding.missions import designer, flight, patch, store
 
 router = APIRouter()
 

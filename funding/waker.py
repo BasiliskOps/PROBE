@@ -11,8 +11,8 @@ from datetime import datetime, timezone
 import httpx
 
 from app.astro.search import jd_from_dt
-from app.missions import flight, store
-from app.swarm import agents
+from funding.missions import flight, store
+from funding.swarm import agents
 
 log = logging.getLogger(__name__)
 MODEL_CALLS_PER_MISSION_PER_TICK = 3  # a long outage backfills with templates, not a burst of model calls
@@ -85,7 +85,7 @@ async def tick(now: datetime | None = None, fleet_enabled: bool = True) -> int:
         except Exception:
             log.exception("waker failed for %s", m["id"])
     if fleet_enabled:
-        from app.prospect import fleet
+        from funding import fleet
 
         try:
             await fleet.run_daily(now)

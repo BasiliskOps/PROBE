@@ -8,11 +8,11 @@ from fastapi import FastAPI
 from fastapi.staticfiles import StaticFiles
 from mcp.server.transport_security import TransportSecuritySettings
 
-from app.api.routes import router as api_router
+from funding.api.routes import router as api_router
 from app.config import settings
-from app.mcp_server import mcp
-from app.payments import build_x402_middleware
-from app.web import router as web_router
+from funding.mcp_server import mcp
+from funding.payments import build_x402_middleware
+from funding.web import router as web_router
 
 PAID_ROUTES = {"POST /api/v1/missions/design": settings.price_mission_design}
 
@@ -32,7 +32,7 @@ def create_app(run_waker: bool = True) -> FastAPI:
 
     @contextlib.asynccontextmanager
     async def lifespan(_app):
-        from app import waker
+        from funding import waker
 
         task = asyncio.create_task(waker.run_forever(settings.waker_interval_s)) if run_waker else None
         async with mcp.session_manager.run():

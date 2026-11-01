@@ -10,7 +10,7 @@ import re
 from app.astro.constants import MOONS, PLANETS
 from app.config import settings
 
-from .llm import obj, structured
+from app.swarm.llm import obj, structured
 
 TARGETS = [p for p in PLANETS if p != "earth"] + list(MOONS)
 CLASSES = {"small": 600.0, "medium": 1800.0, "flagship": 3200.0}

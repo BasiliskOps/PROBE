@@ -2,7 +2,8 @@
 import asyncio
 from types import SimpleNamespace
 
-from app.swarm import intent, llm
+from app.swarm import llm
+from funding.swarm import intent
 
 
 class FakeMessages:

@@ -1,7 +1,7 @@
 from mcp.server.mcpserver import MCPServer
 
 from app.config import settings
-from app.payments import build_mcp_paywall
+from funding.payments import build_mcp_paywall
 
 mcp = MCPServer("probe", instructions=(
     "PROBE designs real space missions with real orbital mechanics and flies them in real time. "
@@ -14,7 +14,7 @@ paid = build_mcp_paywall(settings.price_mission_design)
 @paid
 async def design_mission(sentence: str) -> dict:
     """Design a real space mission from one sentence: next launch window, route, fuel budget, launch vehicle."""
-    from app.api.routes import now_jd, public_view, run_design
+    from funding.api.routes import now_jd, public_view, run_design
 
     m, token = await run_design(sentence, plan="api")
     if m["status"] == "failed":
@@ -25,8 +25,8 @@ async def design_mission(sentence: str) -> dict:
 @mcp.tool()
 async def mission_status(mission_id: str) -> dict:
     """Where a probe is right now, what happens next, and any decision waiting on its owner."""
-    from app.api.routes import now_jd, public_view
-    from app.missions import store
+    from funding.api.routes import now_jd, public_view
+    from funding.missions import store
 
     m = store.get(mission_id)
     if m is None:
@@ -39,7 +39,7 @@ async def mission_decide(mission_id: str, owner_token: str, decision_id: str, op
     """Answer an open decision point. Spending propellant now changes every later option."""
     from fastapi import HTTPException
 
-    from app.api.routes import apply_decision
+    from funding.api.routes import apply_decision
 
     try:
         return apply_decision(mission_id, decision_id, option_id, owner_token)

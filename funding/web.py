@@ -8,10 +8,10 @@ from fastapi import APIRouter, Form, HTTPException, Request
 from fastapi.responses import HTMLResponse, RedirectResponse, Response
 from fastapi.templating import Jinja2Templates
 
-from app.api.routes import apply_decision, now_jd, public_view
+from funding.api.routes import apply_decision, now_jd, public_view
 from app.astro.search import iso
 from app.config import settings
-from app.missions import designer, store
+from funding.missions import designer, store
 
 TEMPLATES = Jinja2Templates(directory=Path(__file__).parent / "templates")
 TEMPLATES.env.globals["iso"] = iso
@@ -29,7 +29,7 @@ TEMPLATES.env.filters["human"] = human
 
 
 def tonnes(t: float) -> str:
-    from app.swarm.agents import fmt_tonnes
+    from funding.swarm.agents import fmt_tonnes
 
     return fmt_tonnes(t)
 
@@ -46,7 +46,7 @@ def _owner_cookie(mid: str) -> str:
 
 
 def _recent() -> list[dict]:
-    from app.missions import flight
+    from funding.missions import flight
 
     out = []
     real = now_jd()
