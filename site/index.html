@@ -1,0 +1,56 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+  <title>Lastelle AI | Atlas of the Local System</title>
+  <meta name="description" content="Resource-bearing bodies of the local star system, mapped from published survey and mission data and ranked by expected water, metals and volatiles." />
+  <meta name="theme-color" content="#120F0A" />
+  <meta name="color-scheme" content="dark" />
+  <link rel="icon" href="assets/favicon.svg" type="image/svg+xml" />
+  <link rel="icon" href="assets/favicon-48.png" sizes="48x48" type="image/png" />
+  <link rel="preload" href="assets/geist-latin-wght-normal.woff2" as="font" type="font/woff2" crossorigin />
+  <link rel="preload" href="data/system.json" as="fetch" crossorigin />
+  <link rel="stylesheet" href="style.css" />
+  <script type="importmap">{"imports":{"three":"https://cdn.jsdelivr.net/npm/three@0.170.0/build/three.module.min.js","three/addons/":"https://cdn.jsdelivr.net/npm/three@0.170.0/examples/jsm/"}}</script>
+  <script type="module" src="app.js"></script>
+</head>
+<body>
+  <canvas id="field" aria-label="Three-dimensional map of the local star system"></canvas>
+  <div id="labels" aria-hidden="true"></div>
+  <div id="hover" class="hover" hidden></div>
+
+  <header class="mark">
+    <a href="https://lastelle.ai/" aria-label="Lastelle AI"><img src="assets/mark.svg" alt="" width="36" height="36" /></a>
+  </header>
+
+  <aside class="ledger" id="ledger" aria-labelledby="ledger-title">
+    <button class="ledger-toggle" id="ledger-toggle" aria-expanded="true" aria-controls="ledger-body">Ranked bodies</button>
+    <div class="ledger-body" id="ledger-body">
+      <h1 id="ledger-title">Atlas of the local system</h1>
+      <p class="lede">Resource-bearing bodies mapped from published survey and mission data, ranked by expected yield against the cost to reach them.</p>
+      <label class="check"><input type="checkbox" id="neo-only" /> <span>Near-Earth only</span></label>
+      <ol class="ranks" id="ranks"></ol>
+      <p class="count" id="count"></p>
+    </div>
+  </aside>
+
+  <section class="sheet" id="sheet" aria-live="polite" hidden>
+    <button class="close" id="sheet-close" aria-label="Close details">Close</button>
+    <div id="sheet-body"></div>
+  </section>
+
+  <footer class="bar" aria-label="Controls">
+    <div class="resources" role="radiogroup" aria-label="Rank by resource" id="resources"></div>
+    <div class="time">
+      <button id="play" aria-pressed="false">Play</button>
+      <div class="rates" role="radiogroup" aria-label="Time rate" id="rates"></div>
+      <output id="date" aria-live="off"></output>
+      <button id="today">Today</button>
+    </div>
+  </footer>
+
+  <p class="status" id="status" role="status">Loading the published dataset</p>
+  <p class="provenance" id="provenance"></p>
+</body>
+</html>

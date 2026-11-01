@@ -1,12 +1,12 @@
-# PROBE
+# Atlas of the local system
 
-Send a probe to prospect the solar system for water, nickel, cobalt and platinum-group metals. Targets come live
-from NASA JPL's asteroid catalog. Each probe flies real orbital mechanics on a fast mission clock, surveys what it
-finds and adds it to a shared atlas. A house fleet launches its own prospectors at newly discovered asteroids.
+Resource-bearing bodies of the local star system, mapped from published survey and mission data and ranked by expected water, metals and volatiles against the cost to reach them. A Lastelle AI project.
 
 ```
-pip install -r requirements.txt
-cp .env.example .env          # set ANTHROPIC_API_KEY; EPHEMERIS_SOURCE=de421 works offline
-uvicorn app.main:app --reload
-python -m pytest -q
+pip install -r requirements-collect.txt
+python -m app.collect.run          # collect, rank, write site/data
+python -m http.server -d site      # view the interface locally
+python -m pytest -q tests          # core tests (full engine: pip install -r requirements.txt)
 ```
+
+Sources: JPL Small-Body Database (query and lookup APIs), JPL DE421 planetary ephemeris, NASA Image and Video Library.

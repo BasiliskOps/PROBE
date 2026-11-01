@@ -1,0 +1,9 @@
+{
+  // Static interface plus the published dataset. The daily collection run commits
+  // site/data, and Cloudflare Workers Builds redeploys on that push.
+  "name": "lastelle-atlas",
+  "compatibility_date": "2026-10-01",
+  "assets": {
+    "directory": "./site"
+  }
+}

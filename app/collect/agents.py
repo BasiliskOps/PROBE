@@ -172,9 +172,15 @@ async def ephemeris_agent(jd: float) -> dict:
         return _result("ephemeris", "JPL DE421", [], str(exc), started)
 
 
+NOT_IMAGERY = ("logo", "patch", "insignia", "poster", "artist", "illustration", "concept")
+
+
 def _match(item: dict, names: list[str]) -> bool:
     d = (item.get("data") or [{}])[0]
-    text = f"{d.get('title', '')} {' '.join(d.get('keywords') or [])}".lower()
+    title = (d.get("title") or "").lower()
+    if any(w in title for w in NOT_IMAGERY):
+        return False
+    text = f"{title} {' '.join(d.get('keywords') or [])}".lower()
     return any(n.lower() in text for n in names)
 
 

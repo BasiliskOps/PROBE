@@ -64,6 +64,17 @@ def sig(x: float, n: int = 3) -> float:
     return float(f"{x:.{n}g}")
 
 
+def group_fractions() -> dict:
+    """Mass-fraction bounds per composition group; the interface multiplies by mass for tonnage ranges."""
+    from app.prospect import composition
+
+    out = {}
+    for g in composition.GROUPS:
+        b = R._bounds({}, g, 1000.0)  # 1000 kg -> tonnes equal the mass fraction
+        out[g] = {k: [sig(lo), sig(hi)] for k, (lo, hi) in b.items()}
+    return out
+
+
 def publish_row(r: dict, imagery: dict) -> dict:
     a = r["assessment"]
     row = {
@@ -75,8 +86,6 @@ def publish_row(r: dict, imagery: dict) -> dict:
         "grp": a["group"], "basis": a["basis"], "neo": bool(r.get("neo")), "pha": bool(r.get("pha")),
         "oc": r.get("orbit_class"), "dv": sig(a["dv"]), "mass": sig(a["mass_kg"]),
         "t": {k: sig(v) for k, v in a["tonnes"].items()},
-        "lo": {k: sig(v[0]) for k, v in a["bounds"].items()},
-        "hi": {k: sig(v[1]) for k, v in a["bounds"].items()},
         "rk": r["ranks"],
     }
     if r.get("measured"):
@@ -105,6 +114,7 @@ async def collect(top_physical: int = 150) -> dict:
         "planets": eph["records"],
         "bodies": [publish_row(r, img["records"]) for r in ranked],
         "resources": R.RESOURCES,
+        "groups": group_fractions(),
     }
     manifest = {
         "generated_at": system["generated_at"], "epoch_jd": jd,

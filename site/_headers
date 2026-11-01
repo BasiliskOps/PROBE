@@ -1,0 +1,13 @@
+/*
+  Content-Security-Policy: default-src 'none'; script-src 'self' https://cdn.jsdelivr.net/npm/three@0.170.0/ 'sha256-LMRQHBdmpsf967ulA3yK5RgCPvlK95SIl24M+V9wplg='; style-src 'self'; img-src 'self' data: https://images-assets.nasa.gov; font-src 'self'; connect-src 'self'; manifest-src 'self'; base-uri 'none'; form-action 'none'; frame-ancestors 'none'; object-src 'none'
+  X-Content-Type-Options: nosniff
+  Referrer-Policy: strict-origin-when-cross-origin
+  Permissions-Policy: camera=(), microphone=(), geolocation=(), payment=(), usb=()
+  Cross-Origin-Opener-Policy: same-origin
+  Strict-Transport-Security: max-age=31536000; includeSubDomains
+
+/data/*
+  Cache-Control: public, max-age=1800, must-revalidate
+
+/assets/*
+  Cache-Control: public, max-age=604800
