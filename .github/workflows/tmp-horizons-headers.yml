@@ -1,0 +1,20 @@
+name: tmp-horizons-headers
+on:
+  push:
+    branches: [tmp-horizons-headers]
+permissions:
+  contents: read
+jobs:
+  dump:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: Print Horizons object-data headers
+        run: |
+          for id in 301 401 402 501 599 699 799 899 801 199 299; do
+            echo "=== $id ==="
+            curl -sS --get "https://ssd.jpl.nasa.gov/api/horizons.api" \
+              --data-urlencode "format=text" --data-urlencode "COMMAND='$id'" \
+              --data-urlencode "OBJ_DATA='YES'" --data-urlencode "MAKE_EPHEM='NO'" | sed -n '1,45p'
+            sleep 1
+          done
