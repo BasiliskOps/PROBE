@@ -1,4 +1,4 @@
-# Atlas of the local system
+# Ephemeris
 
 Resource-bearing bodies of the local star system, mapped from published survey and mission data and ranked by expected water, metals and volatiles against the cost to reach them. A Lastelle AI project.
 

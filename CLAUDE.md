@@ -1,10 +1,10 @@
 # PROBE (repository name only)
 
-"Probe" is the repository name. It never appears in anything public: page titles, copy, metadata or file names served to visitors. Public-facing, this is the Lastelle AI atlas of the local system.
+"Probe" is the repository name. It never appears in anything public: page titles, copy, metadata or file names served to visitors. Public-facing, this is Ephemeris, the Lastelle AI instrument that locates and plots the bodies of the local system. The Cloudflare Worker keeps the internal name `lastelle-atlas`.
 
 ## What it is
 
-Direction set by Damien on 2026-11-01. A collection swarm pulls published survey and mission data on the small bodies of the local star system, a deterministic ranking scores them by expected resource yield against the cost to reach them, and a Three.js interface maps the result onto a true-scale model of the system. It is the first piece of Lastelle's aerospace work, which reaches toward a wider network of sensors and probes held in orbit around the planets.
+Direction set by Damien on 2026-11-01. A collection swarm pulls published survey and mission data on the small bodies of the local star system, a deterministic ranking scores them by expected resource yield against the cost to reach them, and a Three.js interface plots the result on a model of the system. It is the first piece of Lastelle's aerospace work, which reaches toward a wider network of sensors and probes held in orbit around the planets.
 
 Serious instrument, no game layer. No simulated missions, personas, letters, subscriptions or payments in the core.
 

@@ -1,4 +1,4 @@
-// Atlas of the local system. Positions propagate from published osculating
+// Ephemeris of the local system. Positions propagate from published osculating
 // elements (JPL SBDB for small bodies, JPL DE421 for planets) on two-body
 // Keplerian orbits about the Sun. Distances are true to scale in astronomical
 // units; body sizes are enlarged so they stay visible.
