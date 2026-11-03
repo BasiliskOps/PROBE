@@ -1,53 +1,44 @@
 {
- "generated_at": "2026-11-03T15:32:19Z",
- "epoch_jd": 2461348.146943713,
+ "generated_at": "2026-11-03T10:48:58Z",
+ "epoch_jd": 2461347.9504194297,
  "agents": [
   {
    "agent": "catalog",
    "source": "https://ssd-api.jpl.nasa.gov/sbdb_query.api",
-   "retrieved_at": "2026-11-03T15:31:37Z",
+   "retrieved_at": "2026-11-03T10:48:37Z",
    "count": 6763,
    "error": null,
-   "seconds": 1.71
+   "seconds": 1.33
   },
   {
    "agent": "ephemeris",
    "source": "JPL DE421",
-   "retrieved_at": "2026-11-03T15:31:36Z",
+   "retrieved_at": "2026-11-03T10:48:36Z",
    "count": 8,
    "error": null,
-   "seconds": 0.06
-  },
-  {
-   "agent": "horizons",
-   "source": "https://ssd.jpl.nasa.gov/api/horizons.api",
-   "retrieved_at": "2026-11-03T15:31:58Z",
-   "count": 33,
-   "error": null,
-   "seconds": 22.59
+   "seconds": 0.03
   },
   {
    "agent": "physical",
    "source": "https://ssd-api.jpl.nasa.gov/sbdb.api",
-   "retrieved_at": "2026-11-03T15:32:13Z",
-   "count": 155,
-   "error": null,
-   "seconds": 14.46
+   "retrieved_at": "2026-11-03T10:48:51Z",
+   "count": 148,
+   "error": "7 lookups failed",
+   "seconds": 13.66
   },
   {
    "agent": "imagery",
    "source": "https://images-api.nasa.gov/search",
-   "retrieved_at": "2026-11-03T15:32:19Z",
+   "retrieved_at": "2026-11-03T10:48:58Z",
    "count": 9,
    "error": null,
-   "seconds": 6.57
+   "seconds": 7.49
   }
  ],
  "method": {
   "composition": "Spectral class, or albedo when no class is measured, mapped to meteorite analog groups with published mass-fraction ranges (app/prospect/composition.py).",
   "mass": "Measured GM and density from the JPL SBDB where published, otherwise diameter and the group's mean bulk density.",
   "reach": "Rough rendezvous cost from Earth's orbit (Hohmann, plane change, eccentricity term), for ordering only.",
-  "ranking": "log10(expected tonnes) - 1.2 x reach in km/s, per resource and overall.",
-  "moons": "Osculating elements of each major satellite about its planet center, ecliptic J2000, from JPL Horizons at the run epoch; physical values from the Horizons object data."
+  "ranking": "log10(expected tonnes) - 1.2 x reach in km/s, per resource and overall."
  }
 }
