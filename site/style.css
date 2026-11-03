@@ -135,7 +135,7 @@ a:hover { text-decoration-color: var(--ember); }
   background: var(--glass); border: 1px solid var(--hair);
   backdrop-filter: blur(14px); -webkit-backdrop-filter: blur(14px);
 }
-.resources, .rates { display: flex; gap: 4px; flex-wrap: wrap; }
+.resources, .views { display: flex; gap: 4px; flex-wrap: wrap; }
 .seg {
   padding: 7px 12px; border-radius: 999px; border: 1px solid transparent; background: none; color: var(--dust); font-size: 13px;
   transition: color 200ms, background 200ms;
@@ -147,7 +147,12 @@ a:hover { text-decoration-color: var(--ember); }
   padding: 7px 14px; border-radius: 999px; border: 1px solid var(--hair); background: none; color: var(--bone); font-size: 13px;
 }
 #play[aria-pressed="true"] { border-color: var(--ember); color: var(--ember-hi); }
-#date { min-width: 104px; text-align: center; color: var(--bone); font-size: 13px; }
+#date { min-width: 168px; text-align: center; color: var(--bone); font-size: 13px; font-variant-numeric: tabular-nums; }
+.rate { display: flex; align-items: center; gap: 8px; color: var(--dust); font-size: 12px; }
+.rate input { width: 140px; accent-color: var(--ember); margin: 0; }
+.rate span { min-width: 112px; font-variant-numeric: tabular-nums; }
+#play:disabled, .rate input:disabled { opacity: 0.4; }
+.lbl.moon { font-size: 10.5px; color: var(--faint); }
 
 .status {
   position: fixed; z-index: 2; left: 50%; top: 50%; transform: translate(-50%, -50%); margin: 0;

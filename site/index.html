@@ -42,11 +42,12 @@
 
   <footer class="bar" aria-label="Controls">
     <div class="resources" role="radiogroup" aria-label="Rank by resource" id="resources"></div>
+    <div class="views" role="radiogroup" aria-label="View" id="views"></div>
     <div class="time">
-      <button id="play" aria-pressed="false">Play</button>
-      <div class="rates" role="radiogroup" aria-label="Time rate" id="rates"></div>
+      <button id="play" aria-pressed="true">Pause</button>
+      <label class="rate"><input type="range" id="rate" min="0" max="7.5" step="0.01" value="0" aria-describedby="rate-label" /><span id="rate-label">Real time</span></label>
       <output id="date" aria-live="off"></output>
-      <button id="today">Today</button>
+      <button id="today">Now</button>
     </div>
   </footer>
 

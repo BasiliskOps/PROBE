@@ -97,7 +97,7 @@ def publish_row(r: dict, imagery: dict) -> dict:
 
 async def collect(top_physical: int = 150) -> dict:
     jd = jd_now()
-    cat, eph = await asyncio.gather(agents.catalog_agent(), agents.ephemeris_agent(jd))
+    cat, eph, hz = await asyncio.gather(agents.catalog_agent(), agents.ephemeris_agent(jd), agents.horizons_agent(jd))
     if not cat["records"]:
         raise SystemExit(f"catalog agent returned nothing ({cat['error']}); refusing to publish an empty dataset")
     ranked = R.rank(cat["records"])
@@ -108,10 +108,13 @@ async def collect(top_physical: int = 150) -> dict:
                for t in cat["records"]]
     ranked = R.rank(targets)
     img = await agents.imagery_agent([r for r in ranked if r["id"] in agents.VISITED])
-    runs = [cat, eph, phys, img]
+    runs = [cat, eph, hz, phys, img]
+    hzr = hz["records"] or {}
+    planet_phys = hzr.get("planet_phys", {})
     system = {
         "generated_at": agents._now(), "epoch_jd": jd,
-        "planets": eph["records"],
+        "planets": [{**p, "phys": planet_phys.get(p["id"], {})} for p in eph["records"]],
+        "moons": hzr.get("moons", []),
         "bodies": [publish_row(r, img["records"]) for r in ranked],
         "resources": R.RESOURCES,
         "groups": group_fractions(),
@@ -127,6 +130,8 @@ async def collect(top_physical: int = 150) -> dict:
             "reach": "Rough rendezvous cost from Earth's orbit (Hohmann, plane change, eccentricity term), "
                      "for ordering only.",
             "ranking": "log10(expected tonnes) - 1.2 x reach in km/s, per resource and overall.",
+            "moons": "Osculating elements of each major satellite about its planet center, ecliptic J2000, "
+                     "from JPL Horizons at the run epoch; physical values from the Horizons object data.",
         },
     }
     return {"system": system, "manifest": manifest}
