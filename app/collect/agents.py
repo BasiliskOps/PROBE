@@ -14,6 +14,9 @@ Sources:
   osculating elements for display.
 - NASA Image and Video Library API: published mission imagery of bodies
   visited by spacecraft. https://images.nasa.gov/docs/images.nasa.gov_api_docs.pdf
+- JPL Horizons API: osculating elements of the major natural satellites about
+  their planets, and published physical data for planets and satellites.
+  https://ssd-api.jpl.nasa.gov/doc/horizons.html
 """
 from __future__ import annotations
 
@@ -21,6 +24,7 @@ import asyncio
 import json
 import logging
 import math
+import re
 import time
 from datetime import datetime, timezone
 
@@ -213,3 +217,125 @@ async def imagery_agent(bodies: list[dict], per_body: int = 6) -> dict:
                 errors += 1
             await asyncio.sleep(0.25)
     return _result("imagery", NASA_IMAGES, out, f"{errors} queries failed" if errors else None, started)
+
+
+# ---------------- JPL Horizons: natural satellites and planetary physical data ----------------
+HORIZONS = "https://ssd.jpl.nasa.gov/api/horizons.api"
+
+# Major natural satellites: (Horizons command, name, parent planet).
+MOONS = [
+    ("301", "Moon", "earth"),
+    ("401", "Phobos", "mars"), ("402", "Deimos", "mars"),
+    ("501", "Io", "jupiter"), ("502", "Europa", "jupiter"), ("503", "Ganymede", "jupiter"),
+    ("504", "Callisto", "jupiter"), ("505", "Amalthea", "jupiter"),
+    ("601", "Mimas", "saturn"), ("602", "Enceladus", "saturn"), ("603", "Tethys", "saturn"),
+    ("604", "Dione", "saturn"), ("605", "Rhea", "saturn"), ("606", "Titan", "saturn"),
+    ("607", "Hyperion", "saturn"), ("608", "Iapetus", "saturn"), ("609", "Phoebe", "saturn"),
+    ("701", "Ariel", "uranus"), ("702", "Umbriel", "uranus"), ("703", "Titania", "uranus"),
+    ("704", "Oberon", "uranus"), ("705", "Miranda", "uranus"),
+    ("801", "Triton", "neptune"), ("802", "Nereid", "neptune"), ("808", "Proteus", "neptune"),
+]
+
+_NUM = r"([-+]?\d+(?:\.\d*)?(?:[Ee][-+]?\d+)?)"
+_ELEM = re.compile(r"\b(EC|QR|IN|OM|W|Tp|N|MA|TA|A|AD|PR)\s*=\s*" + _NUM)
+
+
+def parse_elements(text: str) -> dict | None:
+    """First element set between $$SOE and $$EOE of a Horizons ELEMENTS ephemeris (KM-D units)."""
+    if "$$SOE" not in text or "$$EOE" not in text:
+        return None
+    block = text.split("$$SOE", 1)[1].split("$$EOE", 1)[0].strip()
+    if not block:
+        return None
+    epoch = float(re.match(r"\s*" + _NUM, block).group(1))
+    vals: dict[str, float] = {}
+    for key, val in _ELEM.findall(block):
+        vals.setdefault(key, float(val))
+    need = ("A", "EC", "IN", "OM", "W", "MA", "N")
+    if not all(k in vals for k in need):
+        return None
+    return {"epoch": epoch, "a_km": vals["A"], "e": vals["EC"], "i": vals["IN"], "om": vals["OM"],
+            "w": vals["W"], "ma": vals["MA"], "n": vals["N"], "period_d": vals.get("PR")}
+
+
+_PHYS = {
+    "radius_km": re.compile(r"(?:[Vv]ol\.?\s*[Mm]ean\s+[Rr]adius|[Mm]ean\s+[Rr]adius|\b[Rr]adius)[^=\n]*?\(km\)\s*=\s*~?\s*" + _NUM),
+    "density": re.compile(r"\b[Dd]ensity[^=\n]*=\s*~?\s*" + _NUM),
+    "gravity": re.compile(r"(?:[Ee]qu\.?\s*gravity|\bg_e)[^=\n]*=\s*~?\s*" + _NUM),
+    "escape": re.compile(r"[Ee]scape\s+(?:velocity|speed)[^=\n]*=\s*~?\s*" + _NUM),
+    "albedo": re.compile(r"[Gg]eometric\s+[Aa]lbedo[^=\n]*=\s*~?\s*" + _NUM),
+}
+_MASS = re.compile(r"\bMass[,\s]*(?:x\s*10\^\s*(\d+)\s*\(\s*(kg|g)\s*\)|\(\s*10\^\s*(\d+)\s*(kg|g)\s*\))\s*=\s*~?\s*" + _NUM)
+_ROT = re.compile(r"[Ss]id(?:ereal|\.)\s*rot(?:ation|\.)?\s*period[^=\n]*=\s*~?\s*" + _NUM + r"\s*(hr|h|d|days?)?")
+
+
+def parse_object_data(text: str) -> dict:
+    """Physical values published in the Horizons object-data header. Missing values are left out."""
+    head = text.split("$$SOE", 1)[0]
+    out: dict[str, float] = {}
+    for key, rx in _PHYS.items():
+        m = rx.search(head)
+        if m:
+            out[key] = float(m.group(1))
+    m = _MASS.search(head)
+    if m:
+        exp, unit = int(m.group(1) or m.group(3)), (m.group(2) or m.group(4))
+        val = float(m.group(5))
+        out["mass_kg"] = val * 10 ** exp / (1000.0 if unit == "g" else 1.0)
+    m = _ROT.search(head)
+    if m:
+        v, unit = abs(float(m.group(1))), (m.group(2) or "h")
+        out["rotation_h"] = v * 24.0 if unit.startswith("d") else v
+    return out
+
+
+def _horizons_params(command: str, jd: float, center: str | None) -> dict:
+    p = {"format": "json", "COMMAND": f"'{command}'", "OBJ_DATA": "'YES'"}
+    if center is None:
+        p["MAKE_EPHEM"] = "'NO'"
+    else:
+        p.update({"MAKE_EPHEM": "'YES'", "EPHEM_TYPE": "'ELEMENTS'", "CENTER": f"'500@{center}'",
+                  "TLIST": f"'{jd:.6f}'", "OUT_UNITS": "'KM-D'", "REF_PLANE": "'ECLIPTIC'",
+                  "REF_SYSTEM": "'J2000'", "TP_TYPE": "'ABSOLUTE'", "CSV_FORMAT": "'NO'"})
+    return p
+
+
+async def horizons_agent(jd: float) -> dict:
+    """Satellite elements about each parent planet at jd, and physical data for planets and satellites."""
+    from app.astro.constants import HORIZONS_ID
+
+    started = time.time()
+    moons, planet_phys, errors = [], {}, 0
+    async with httpx.AsyncClient(timeout=40, headers=UA) as client:
+        async def text(command: str, center: str | None) -> str:
+            r = await client.get(HORIZONS, params=_horizons_params(command, jd, center))
+            r.raise_for_status()
+            body = r.json()
+            if body.get("error"):
+                raise RuntimeError(body["error"])
+            return body.get("result", "")
+
+        for name, hid in HORIZONS_ID.items():
+            try:
+                phys = parse_object_data(await text(hid, None))
+                if phys:
+                    planet_phys[name] = phys
+            except Exception:
+                errors += 1
+            await asyncio.sleep(0.4)  # stay polite to JPL
+        for cmd, name, parent in MOONS:
+            try:
+                t = await text(cmd, HORIZONS_ID[parent])
+                el = parse_elements(t)
+                if el:
+                    moons.append({"id": name.lower(), "name": name, "parent": parent, "hid": cmd,
+                                  **el, "phys": parse_object_data(t)})
+                else:
+                    errors += 1
+            except Exception:
+                errors += 1
+            await asyncio.sleep(0.4)
+    res = _result("horizons", HORIZONS, {"moons": moons, "planet_phys": planet_phys},
+                  f"{errors} requests failed" if errors else None, started)
+    res["count"] = len(moons) + len(planet_phys)
+    return res
