@@ -1,46 +1,46 @@
 {
- "generated_at": "2026-11-06T10:50:45Z",
- "epoch_jd": 2461350.951464153,
+ "generated_at": "2026-11-07T10:03:00Z",
+ "epoch_jd": 2461351.918323765,
  "agents": [
   {
    "agent": "catalog",
    "source": "https://ssd-api.jpl.nasa.gov/sbdb_query.api",
-   "retrieved_at": "2026-11-06T10:50:07Z",
+   "retrieved_at": "2026-11-07T10:02:23Z",
    "count": 6763,
    "error": null,
-   "seconds": 0.98
+   "seconds": 0.75
   },
   {
    "agent": "ephemeris",
    "source": "JPL DE421",
-   "retrieved_at": "2026-11-06T10:50:06Z",
+   "retrieved_at": "2026-11-07T10:02:23Z",
    "count": 8,
    "error": null,
-   "seconds": 0.05
+   "seconds": 0.06
   },
   {
    "agent": "horizons",
    "source": "https://ssd.jpl.nasa.gov/api/horizons.api",
-   "retrieved_at": "2026-11-06T10:50:23Z",
+   "retrieved_at": "2026-11-07T10:02:39Z",
    "count": 33,
    "error": null,
-   "seconds": 16.77
+   "seconds": 16.54
   },
   {
    "agent": "physical",
    "source": "https://ssd-api.jpl.nasa.gov/sbdb.api",
-   "retrieved_at": "2026-11-06T10:50:35Z",
-   "count": 142,
-   "error": "13 lookups failed",
-   "seconds": 12.5
+   "retrieved_at": "2026-11-07T10:02:51Z",
+   "count": 144,
+   "error": "11 lookups failed",
+   "seconds": 12.11
   },
   {
    "agent": "imagery",
    "source": "https://images-api.nasa.gov/search",
-   "retrieved_at": "2026-11-06T10:50:45Z",
+   "retrieved_at": "2026-11-07T10:03:00Z",
    "count": 9,
    "error": null,
-   "seconds": 9.77
+   "seconds": 8.81
   }
  ],
  "method": {
